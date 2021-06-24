@@ -50,6 +50,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -255,6 +256,21 @@ func (r *SecretProviderClassPodStatusReconciler) Reconcile(ctx context.Context, 
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	// gets the secrets listed in the "parameters" field of the SecretProviderClass
+	var secrets []v1alpha1.Secret
+	err := yaml.Unmarshal([]byte(spc.Spec.Parameters["objects"]), &secrets)
+
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to unmarshal secret objects for SecretProviderClass: %s", spc.Name)
+	}
+
+	for _, secretObject := range spc.Spec.SecretObjects {
+		// determines if data property should be built for SecretObject
+		if len(secretObject.DataFrom) > 0 {
+			buildSecretObjectDataList(secretObject, secrets)
+		}
 	}
 
 	if len(spc.Spec.SecretObjects) == 0 {
@@ -479,5 +495,19 @@ func (r *SecretProviderClassPodStatusReconciler) secretExists(ctx context.Contex
 func (r *SecretProviderClassPodStatusReconciler) generateEvent(obj runtime.Object, eventType, reason, message string) {
 	if obj != nil {
 		r.eventRecorder.Eventf(obj, eventType, reason, message)
+	}
+}
+
+// builds the data property of a SecretObject
+func buildSecretObjectDataList(secretObject *v1alpha1.SecretObject, secrets []v1alpha1.Secret) {
+	for _, dataFromItem := range secretObject.DataFrom {
+		for _, secret := range secrets {
+			if dataFromItem.SecretList == secret.SecretList {
+				secretObject.Data = append(secretObject.Data, &v1alpha1.SecretObjectData{
+					ObjectName: secret.ObjectName,
+					Key:        secret.SecretKey,
+				})
+			}
+		}
 	}
 }

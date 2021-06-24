@@ -40,6 +40,16 @@ type SecretObjectData struct {
 	Key string `json:"key,omitempty"`
 }
 
+type SecretObjectDataFrom struct {
+	SecretList string `json:"secretList,omitempty"`
+}
+
+type Secret struct {
+	ObjectName string `yaml:"objectName,omitempty"`
+	SecretKey  string `yaml:"secretKey,omitempty"`
+	SecretList string `yaml:"secretList,omitempty"`
+}
+
 // SecretObject defines the desired state of synced K8s secret objects
 type SecretObject struct {
 	// name of the K8s secret object
@@ -47,8 +57,9 @@ type SecretObject struct {
 	// type of K8s secret object
 	Type string `json:"type,omitempty"`
 	// labels of K8s secret object
-	Labels map[string]string   `json:"labels,omitempty"`
-	Data   []*SecretObjectData `json:"data,omitempty"`
+	Labels   map[string]string       `json:"labels,omitempty"`
+	Data     []*SecretObjectData     `json:"data,omitempty"`
+	DataFrom []*SecretObjectDataFrom `json:"dataFrom,omitempty"`
 }
 
 // SecretProviderClassSpec defines the desired state of SecretProviderClass
