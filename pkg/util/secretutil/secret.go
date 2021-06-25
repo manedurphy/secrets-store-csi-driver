@@ -168,7 +168,7 @@ func GetSecretData(secretObjData []*v1alpha1.SecretObjectData, secretType corev1
 		dataKey := strings.TrimSpace(data.Key)
 
 		if len(objectName) == 0 {
-			return datamap, fmt.Errorf("object name in secretObjects.data")
+			return datamap, fmt.Errorf("object name in secretObjects.data is empty")
 		}
 		if len(dataKey) == 0 {
 			return datamap, fmt.Errorf("key in secretObjects.data is empty")
