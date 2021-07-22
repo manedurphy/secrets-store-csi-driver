@@ -257,21 +257,6 @@ func (r *SecretProviderClassPodStatusReconciler) Reconcile(ctx context.Context, 
 		return ctrl.Result{}, err
 	}
 
-	// gets the secrets listed in the "parameters" field of the SecretProviderClass
-	// var secrets []v1alpha1.Secret
-	// err := yaml.Unmarshal([]byte(spc.Spec.Parameters["objects"]), &secrets)
-
-	// if err != nil {
-	// 	return ctrl.Result{}, fmt.Errorf("failed to unmarshal secret objects for SecretProviderClass: %s", spc.Name)
-	// }
-
-	// for _, secretObject := range spc.Spec.SecretObjects {
-	// determines if data property should be built or altered for SecretObject
-	// 	if len(secretObject.DataFrom) > 0 {
-	// 		buildSecretObjectDataList(secretObject, secrets)
-	// 	}
-	// }
-
 	if len(spc.Spec.SecretObjects) == 0 {
 		klog.InfoS("no secret objects defined for spc, nothing to reconcile", "spc", klog.KObj(spc), "spcps", klog.KObj(spcPodStatus))
 		return ctrl.Result{}, nil
@@ -293,18 +278,15 @@ func (r *SecretProviderClassPodStatusReconciler) Reconcile(ctx context.Context, 
 
 	files, err := fileutil.GetMountedFiles(spcPodStatus.Status.TargetPath)
 
-	if spc.Spec.SecretObjects[0].SyncAll {
-		if len(spc.Spec.SecretObjects) == 1 {
+	for _, secretObj := range spc.Spec.SecretObjects {
+		if secretObj.SyncAll {
 			for key := range files {
-				spc.Spec.SecretObjects[0].Data = append(spc.Spec.SecretObjects[0].Data, &v1alpha1.SecretObjectData{
+				secretObj.Data = append(secretObj.Data, &v1alpha1.SecretObjectData{
 					ObjectName: key,
 					Key:        key,
 				})
 			}
-		} else {
-			return ctrl.Result{}, fmt.Errorf("only one secretObject can be defined when syncing all secrets to K8s")
 		}
-
 	}
 
 	if err != nil {
@@ -511,17 +493,3 @@ func (r *SecretProviderClassPodStatusReconciler) generateEvent(obj runtime.Objec
 		r.eventRecorder.Eventf(obj, eventType, reason, message)
 	}
 }
-
-// builds the data property of a SecretObject
-// func buildSecretObjectDataList(secretObject *v1alpha1.SecretObject, secrets []v1alpha1.Secret) {
-// 	for _, dataFromItem := range secretObject.DataFrom {
-// 		for _, secret := range secrets {
-// 			if dataFromItem.SecretList == secret.SecretList {
-// 				secretObject.Data = append(secretObject.Data, &v1alpha1.SecretObjectData{
-// 					ObjectName: secret.ObjectName,
-// 					Key:        secret.SecretKey,
-// 				})
-// 			}
-// 		}
-// 	}
-// }

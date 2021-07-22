@@ -353,6 +353,18 @@ func (r *Reconciler) reconcile(ctx context.Context, spcps *v1alpha1.SecretProvid
 		return nil
 	}
 	files, err := fileutil.GetMountedFiles(spcps.Status.TargetPath)
+
+	for _, secretObj := range spc.Spec.SecretObjects {
+		if secretObj.SyncAll {
+			for key := range files {
+				secretObj.Data = append(secretObj.Data, &v1alpha1.SecretObjectData{
+					ObjectName: key,
+					Key:        key,
+				})
+			}
+		}
+	}
+
 	if err != nil {
 		r.generateEvent(pod, v1.EventTypeWarning, k8sSecretRotationFailedReason, fmt.Sprintf("failed to get mounted files, err: %+v", err))
 		return fmt.Errorf("failed to get mounted files, err: %+v", err)
@@ -451,8 +463,10 @@ func (r *Reconciler) patchSecret(ctx context.Context, name, namespace string, da
 	if err != nil {
 		return fmt.Errorf("failed to marshal old secret, err: %+v", err)
 	}
+
 	secret.Data = data
 	newData, err := json.Marshal(&newSecret)
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal new secret, err: %+v", err)
 	}
@@ -480,7 +494,12 @@ func (r *Reconciler) processNextItem() bool {
 		return false
 	}
 	defer r.queue.Done(key)
+
+	fmt.Println("HERE IS THE KEY:", key)
+
 	spcps, err := r.store.GetSecretProviderClassPodStatus(key.(string))
+	fmt.Println("HERE IS THE SPCPS:", spcps)
+
 	if err != nil {
 		// set the log level to 5 so we don't spam the logs with spc pod status not found
 		klog.V(5).ErrorS(err, "failed to get spc pod status", "spcps", key.(string), "controller", "rotation")
