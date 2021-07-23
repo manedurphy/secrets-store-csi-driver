@@ -52,6 +52,7 @@ import (
 	"sigs.k8s.io/secrets-store-csi-driver/pkg/util/fileutil"
 	"sigs.k8s.io/secrets-store-csi-driver/pkg/util/k8sutil"
 	"sigs.k8s.io/secrets-store-csi-driver/pkg/util/secretutil"
+	"sigs.k8s.io/secrets-store-csi-driver/pkg/util/spcutil"
 	"sigs.k8s.io/secrets-store-csi-driver/pkg/version"
 )
 
@@ -356,12 +357,7 @@ func (r *Reconciler) reconcile(ctx context.Context, spcps *v1alpha1.SecretProvid
 
 	for _, secretObj := range spc.Spec.SecretObjects {
 		if secretObj.SyncAll {
-			for key := range files {
-				secretObj.Data = append(secretObj.Data, &v1alpha1.SecretObjectData{
-					ObjectName: key,
-					Key:        key,
-				})
-			}
+			spcutil.BuildSecretObjectData(files, secretObj)
 		}
 	}
 
@@ -495,10 +491,7 @@ func (r *Reconciler) processNextItem() bool {
 	}
 	defer r.queue.Done(key)
 
-	fmt.Println("HERE IS THE KEY:", key)
-
 	spcps, err := r.store.GetSecretProviderClassPodStatus(key.(string))
-	fmt.Println("HERE IS THE SPCPS:", spcps)
 
 	if err != nil {
 		// set the log level to 5 so we don't spam the logs with spc pod status not found

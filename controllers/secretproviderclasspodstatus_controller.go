@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/secrets-store-csi-driver/pkg/util/spcutil"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -280,12 +281,7 @@ func (r *SecretProviderClassPodStatusReconciler) Reconcile(ctx context.Context, 
 
 	for _, secretObj := range spc.Spec.SecretObjects {
 		if secretObj.SyncAll {
-			for key := range files {
-				secretObj.Data = append(secretObj.Data, &v1alpha1.SecretObjectData{
-					ObjectName: key,
-					Key:        key,
-				})
-			}
+			spcutil.BuildSecretObjectData(files, secretObj)
 		}
 	}
 
